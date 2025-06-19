@@ -4,3 +4,4 @@ coverage
 .batect
 postgres-data
 .env-exapmle
+.env
