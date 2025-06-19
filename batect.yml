@@ -1,0 +1,83 @@
+containers:
+  my-container:
+    image: alpine:3.11.3
+
+  build-fastify-env:
+    image: node:20.14.0       # you can keep Node 20 here
+    volumes:
+      - local: .
+        container: /code
+        options: cached
+      - local: ./node_modules  # <- use a normal bind-mount for node_modules
+        container: /code/node_modules
+        options: cached
+    working_directory: /code
+
+  #postgres sql conatainer
+  db:
+    image: postgres:alpine
+    ports:
+      - 5432:5432
+    volumes:
+      - local: ./postgres-data
+        container: /var/lib/postgresql/data
+    environment:
+      POSTGRES_PASSWORD: password
+      POSTGRES_USER: app
+      POSTGRES_DB: db
+  
+  db-test:
+    image: postgres:alpine
+    ports:
+      - 5432:5432
+    environment:
+      POSTGRES_PASSWORD: password
+      POSTGRES_USER: app
+      POSTGRES_DB: db
+  
+
+tasks:
+  start-test-db:
+    description: start test database
+    run:
+      container: db-test
+
+  say-hello:
+    description: Say hello to the nice person reading the Batect documentation
+    run:
+      container: my-container
+      command: echo 'Hello world!'
+
+  # task for installing dep of fastify app
+  install-dep:
+    description: Install dependecies needed to build fastify application
+    run:
+      container: build-fastify-env
+      command: npm install
+
+  #task for running fastify app
+  start-server:
+    description: Run fastify application
+    run:
+      environment:
+        PORT: 8080
+        POSTGRES_URI: postgres://app:password@db/db
+      container: build-fastify-env
+      command: npm run start
+      ports:
+        - 5000:8080
+    dependencies:
+      - db
+
+  test-watch:
+    description: test running in watch mode
+    run:
+      container: build-fastify-env
+      environment:
+        PORT: 8080
+        POSTGRES_URI: postgres://app:password@db-test/db
+      command: npm run test:watch
+    dependencies:
+      - db-test
+
+
