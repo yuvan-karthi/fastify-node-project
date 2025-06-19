@@ -37,6 +37,11 @@ containers:
   
 
 tasks:
+  start-dev-db:
+    description: start development database
+    run:
+      container: db-test
+
   start-test-db:
     description: start test database
     run:
